@@ -4,8 +4,8 @@ import RegistrationPage from '@/Components/registrationPage.vue';
 import autarizationPage from '@/Components/autarization.vue';
 import categoryPage from '@/Components/categoryPage.vue';
 import ProfilePage from '@/Components/ProfilePage/Profile.vue';
-import adminPage from '@/Components/adminPage.vue';
-import AddPromo from "@/Components/AddPromo.vue";
+import adminPage from '@/Components/AdminPanel/adminPage.vue';
+import AddPromo from "@/Components/AdminPanel/AddingComponents/AddPromo.vue";
 
 
 const routes = [
@@ -34,16 +34,7 @@ const routes = [
     name: 'ProfilePage',
     component: ProfilePage
   },
-  {
-    path: '/user/editing',
-    name: 'profilePage',
-    component: ProfilePage
-  },
-  {
-    path: '/user/mailing',
-    name: 'profilePage',
-    component: ProfilePage
-  },
+
   {
     path: '/admin',
     name: 'adminPage',

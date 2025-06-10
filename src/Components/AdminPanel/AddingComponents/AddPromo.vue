@@ -1,42 +1,92 @@
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
 export default {
   name: 'AddPromo',
-  setup() {
+  props: {
+    promoData: {
+      type: Object,
+      default: null
+    },
+    mode: {
+      type: String,
+      default: 'add', // 'add' или 'edit'
+      validator: value => ['add', 'edit'].includes(value)
+    }
+  },
+  emit: ['close'],
+  setup(props, { emit }) {
     const code = ref('');
     const title = ref('');
-    const description = ref('Скидка 50 рублей на двойной чизбургер');
-    const full_description = ref('Скидка 50 рублей на двойной чизбургер при первой покупке');
+    const userRole = ref('');
+    const description = ref('');
+    const full_description = ref('');
     const discount_type = ref('');
     const discount_value = ref(0);
-    const start_date = ref('2025-03-01');
-    const end_date = ref('2025-03-15');
+    const start_date = ref('');
+    const end_date = ref('');
     const image = ref('');
     const databaseImages = ref([]);
-    const router = useRouter();
     const categories = ref([]);
     const availableCategories = ref([]);
     const stores = ref([]);
+    const storeId = ref('');
     const selectedStore = ref('');
     const isLoading = ref(false);
     const errors = ref({});
 
+    // Загрузка данных
     const loadImagesStoresCategories = async () => {
       try {
-        const responseI = await axios.get('http://localhost:3000/api/images');
-        databaseImages.value = responseI.data;
-        const responseS = await axios.get('http://localhost:3000/api/Stores');
-        stores.value = responseS.data;
-        const responseC = await axios.get('http://localhost:3000/api/category');
-        availableCategories.value = responseC.data;
+        const [imagesRes, storesRes, categoriesRes] = await Promise.all([
+          axios.get('http://localhost:3000/api/images'),
+          axios.get('http://localhost:3000/api/Stores'),
+          axios.get('http://localhost:3000/api/category')
+        ]);
+        
+        databaseImages.value = imagesRes.data;
+        // Фильтруем магазины для менеджера
+        if (userRole.value === 5) {
+          stores.value = storesRes.data.filter(store => store.Store_id === selectedStore.value);
+        } else {
+          stores.value = storesRes.data;
+        }
+        availableCategories.value = categoriesRes.data;
+        
+        if (props.mode === 'edit' && props.promoData) {
+          if (Object.keys(props.promoData).length > 0) {
+            fillFormWithPromoData();
+          }
+        }
       } catch (e) {
         console.error(e);
       }
     };
 
+    // Заполнение формы данными для редактирования
+    const fillFormWithPromoData = () => {
+  const promo = props.promoData;
+  code.value = promo.code || '';
+  title.value = promo.title;
+  description.value = promo.description;
+  full_description.value = promo.full_description;
+  discount_type.value = promo.discount_type;
+  discount_value.value = promo.discount_value;
+  start_date.value = promo.start_date.split('T')[0];
+  end_date.value = promo.end_date.split('T')[0];
+  image.value = promo.image;
+  
+  // Добавляем проверку на существование categories
+  categories.value = promo.categories 
+    ? promo.categories.map(c => c.category_id || c)
+    : [];
+    
+  selectedStore.value = promo.store_id;
+};
+
+    // Валидация формы
     const validateForm = () => {
       errors.value = {};
 
@@ -52,14 +102,19 @@ export default {
       if (!selectedStore.value) errors.value.store = 'Выберите магазин';
       if (!categories.value.length) errors.value.categories = 'Выберите хотя бы одну категорию';
       if (!image.value) errors.value.image = 'Выберите изображение';
-      if (currentDate > startDate) errors.value.startDate = 'Дата начала акции не может быть в прошлом';
-      if (endDate < startDate) errors.value.endDate = 'Дата конца акции не может быть раньше начала акции';
-      if (currentDate > endDate) errors.value.endDate = 'Дата конца акции не может быть в прошлом';
+      
+      // Для режима добавления проверяем даты
+      if (props.mode === 'add') {
+        if (currentDate > startDate) errors.value.startDate = 'Дата начала акции не может быть в прошлом';
+        if (endDate < startDate) errors.value.endDate = 'Дата конца акции не может быть раньше начала акции';
+        if (currentDate > endDate) errors.value.endDate = 'Дата конца акции не может быть в прошлом';
+      }
 
       return Object.keys(errors.value).length === 0;
     };
 
-    const AddPromo = async() => {
+    // Сохранение/обновление промокода
+    const savePromo = async () => {
       if (!validateForm()) {
         alert('Пожалуйста, заполните все обязательные поля');
         return;
@@ -68,7 +123,7 @@ export default {
       isLoading.value = true;
 
       try {
-        const response = await axios.post('http://localhost:3000/api/addPromo', {
+        const payload = {
           code: code.value,
           title: title.value,
           description: description.value,
@@ -80,31 +135,92 @@ export default {
           image: image.value,
           categories: categories.value,
           store_id: selectedStore.value
-        });
+        };
+
+        let response;
+        
+        if (props.mode === 'add') {
+          response = await axios.post('http://localhost:3000/api/addPromo', payload);
+        } else {
+          // Для редактирования добавляем ID промокода
+          payload.id = props.promoData.Promotion_id;
+          
+          response = await axios.put('http://localhost:3000/api/updatePromo', payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+        }
         
         if (response.data.success) {
-          alert('Промокод успешно добавлен');
-          await router.push('/');
+          alert(props.mode === 'add' ? 'Промокод успешно добавлен' : 'Промокод успешно обновлен');
+          location.reload();
         }
       } catch (e) {
-        alert('Ошибка при создании промокода: ' + e.message);
+        alert(`Ошибка при ${props.mode === 'add' ? 'создании' : 'обновлении'} промокода: ${e.message}`);
       } finally {
         isLoading.value = false;
       }
     };
 
+    const close = () => {
+      code.value = '';
+  title.value = '';
+  description.value = '';
+  full_description.value = '';
+  discount_type.value = '';
+  discount_value.value = '';
+  start_date.value = '';
+  end_date.value ='';
+  image.value = '';
+  errors.value = {};
+      emit('close');
+    };
+
+    const checkUserRole = async () => {
+      try{
+        const response1 = await axios.get('http://localhost:3000/token', { withCredentials: true });
+        const userData = response1.data;
+        userRole.value = userData.roles_id;
+        if (userRole.value === 5) {
+          const response = await axios.get('http://localhost:3000/getManagerStore', {
+            params: {
+              id: userData.id
+            }
+          });
+          storeId.value = response.data.store;
+          selectedStore.value = response.data.id;
+        }
+      }
+      catch(e){
+        console.error('Ошибка', e.message);
+      }
+    };
+
     onMounted(() => {
-      loadImagesStoresCategories()
+      loadImagesStoresCategories();
+      checkUserRole();
     });
+
+// Добавляем watch для отслеживания открытия формы
+watch(() => props.promoData, (newVal) => {
+  if (newVal) {
+    loadImagesStoresCategories();
+    checkUserRole();
+  }
+}, { immediate: true });
 
     return {
       code,
+      userRole,
       title,
+      storeId,
       databaseImages,
       description,
       full_description,
       discount_type,
       discount_value,
+      savePromo,
       start_date,
       end_date,
       image,
@@ -113,17 +229,18 @@ export default {
       stores,
       selectedStore,
       isLoading,
+      checkUserRole,
       errors,
+      close,
       loadImagesStoresCategories,
-      AddPromo,
     }
   }
 }
 </script>
 
 <template>
-  <div class = "modal" >
-    <div class="popup-close"></div>
+  <div class = "modal" @click.self="close">
+    <div class="popup-close" @click="close"></div>
     <div class = overlay>
       <div class="column">
       <div class="row">
@@ -136,7 +253,8 @@ export default {
           <label>
             Магазин
           </label>
-          <select v-model="selectedStore" required :class = "{ error: errors.store }">
+          <select v-if="!selectedStore" v-model="selectedStore" required :class = "{ error: errors.store }"  size="4" 
+            style="overflow-y: auto;" >
             <option value="">Выберите магазин</option>
             <option
                 v-for="store in stores"
@@ -144,6 +262,13 @@ export default {
                 :value="store.Store_id"
             >
               {{ store.name }}
+            </option>
+          </select>
+          <select v-else v-model="selectedStore" required class="select-input" :class = "{ error: errors.store }" size="2">
+            <option
+                value="selectedStore"
+            >
+              {{ storeId }}
             </option>
           </select>
           <small class="error-text" v-if="errors.store">{{ errors.store }}</small>
@@ -197,7 +322,7 @@ export default {
           <label>
             Категории (можно выбрать несколько)
           </label>
-          <select v-model="categories" multiple required :class = "{ error: errors.categories }">
+          <select v-model="categories" multiple required :class = "{ error: errors.categories }" >
             <option 
               v-for="category in availableCategories" 
               :key="category.category_id" 
@@ -232,6 +357,7 @@ export default {
             v-model="image" 
             class="image-select"
             :class="{ 'error': errors.image }"
+            size="3"
           >
             <option value="">Выберите изображение</option>
             <option 
@@ -249,10 +375,10 @@ export default {
         </div>
       </div>
         <button 
-          @click="AddPromo" 
+          @click="savePromo" 
           :disabled="isLoading"
         >
-          {{ isLoading ? 'Создание...' : 'Создать промокод' }}
+        {{ isLoading ? (mode === 'add' ? 'Создание...' : 'Обновление...') : (mode === 'add' ? 'Создать промокод' : 'Обновить промокод') }}
         </button>
       </div>
     </div>
@@ -276,6 +402,15 @@ export default {
   align-items: center;
 }
 
+.active {
+  display: flex;
+}
+
+.select-input {
+  height: 28.4px;
+  overflow-y: auto;
+}
+
 .overlay {
   width: 800px;
   height: 700px;
@@ -287,6 +422,7 @@ export default {
   justify-content: space-around;
   padding: 20px;
   overflow-y: auto;
+  margin-top: 10px;
 }
 
 .popup-close {
@@ -304,11 +440,10 @@ export default {
   display: flex;
   flex-direction: column;
   width: 350px;
-  margin: 10px auto;
 }
 
 .column {
-  height: 90%;
+  height: 95%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

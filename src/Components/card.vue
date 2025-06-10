@@ -21,6 +21,7 @@
 .promo img {
   border-radius: 10px;
   max-width: 120px;
+  max-height: 85.5px;
   display: flex;
   margin: 30px auto 10px;
 }
@@ -102,24 +103,27 @@
     height: 28px;
     z-index: 1000;
     cursor: pointer;
-    background: url(/images/icon-close.svg) center no-repeat;
+    background: url(/images/icon-close__white.svg) center no-repeat;
 }
 
 .modal__image {
   width: 20%;
+  cursor: pointer;
 }
 
 .modal__header {
   width: 100%;
   height: 40px;
   margin-bottom: 15px;
-  background-color: #6b81e4;
+  background-color: #1e293b;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
+  color: #cbd5e1;
+
 }
 
 .modal__header p {
-  font-size: 24px;
+  font-size: 22px;
   text-align: left;
   padding: 5px 5px 5px 30px;
   font-weight: 700;
@@ -169,12 +173,127 @@
 }
 
 .modal__decription{
-  margin: 20px 0;
+  margin: 10px 0;
   font-size: 18px;
 }
 
 .modal__title {
   font-size: 24px;
+}
+
+@media screen and (min-width: 250px) and (max-width: 576px){
+
+.promo {
+  width: 110px;
+  font-size: 0.75rem;
+  margin-right: 15px;
+}
+
+.promo img {
+  max-width: 70px;
+  margin: 10px auto;
+}
+
+.promo__decription {
+  padding-left: 0; 
+  width: 100%; 
+  max-height: 70px;
+}
+
+.promo__title {
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.modal__popup-close {
+  display: none;
+}
+.modal__take-promo {
+  width: 150px;
+}
+
+.modal__take-promo input {
+  height: 20px;
+  width: 120px;
+  font-size: 0.8rem;
+}
+
+.Copy {
+  top: -25px;
+  right: -135px;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  font-size: 0;
+}
+
+.modal__overlay {
+  width: 200px;
+  height: 300px;
+}
+
+.modal__header p {
+  font-size: 0.8rem;
+  padding: 5px 0 10px 10px;
+}
+
+.modal__title {
+  font-size: 0.8rem;
+}
+
+.modal__decription {
+  font-size: 0.7rem;
+}
+
+.promo__skidka {
+    top: -10px;
+    right: -15px;
+    background-color: #ff2626;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 0.5rem;
+}
+
+.promo__footer-promo {
+  font-size: 0.6rem;
+}
+}
+
+@media screen and (min-width: 576px) and (max-width: 1000px){
+
+.promo {
+  width: 170px;
+  font-size: 0.95rem;
+}
+
+.promo img {
+  max-width: 110px;
+  margin: 10px auto;
+}
+
+.promo__decription {
+  padding-left: 0; 
+  width: 100%; 
+  max-height: 70px;
+}
+
+.promo__title {
+  padding: 0;
+}
+
+.modal__popup-close {
+  right: -520px;
+}
+
+.modal__overlay {
+  width: 530px
+}
 }
 </style>
 
@@ -194,26 +313,29 @@
                 Ваш промокод для {{ market }}
               </p>
             </div>
-            <div class = "modal__take-promo">
-              <input type="text" v-model = "localCode"><div class = "Copy" @click = "copyText"> скопировать</div>
+            <div class = "modal__take-promo" v-if = "localCode">
+              <input type="text" v-model = "localCode"><div class = "Copy" @click = "copyText">Скопировать</div>
             </div>
-              <img :src="pathimage" alt="Discount image" class="modal__image">
+              <img :src="pathimage" alt="Discount image" class="modal__image" @click="goToStore">
               <h3 class="modal__title">{{ title }}</h3>
-              <p class = "modal__decription">{{ full_description }}. Акция действует с {{ formatedDate(start_date) }} по {{ formatedDate(end_date) }}</p>
+              <p class = "modal__decription">{{ full_description }}.</p>
+              <p class = "modal__decription">Акция действует с {{ formatedDate(start_date) }} по {{ formatedDate(end_date) }}.</p>
             </div>
           </div>
         
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   props: {
     title: String,
     image: String, // ожидается, например, "my-image.png"
-    discount_value: Number,
+    discount_value: String,
     discount_type: String,
-    start_date: Date,
-    end_date: Date,
+    start_date: String,
+    end_date: String,
     description: String,
     full_description: String,
     market: String,
@@ -224,6 +346,7 @@ export default {
       isOpenModal: false,
       localCode: this.code,
       localImage: this.image,
+      link: '',
     };
   },
   watch: {
@@ -241,24 +364,46 @@ export default {
     }
   },
   methods: {
-    openModal() {
-      this.isOpenModal = true;
+
+    formatedDate(a) {
+    const date = new Date(a);
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
     },
+
+    async openModal() {
+      this.isOpenModal = true;
+      const response = await axios.get('http://localhost:3000/api/getLinkStore', {
+        params: {
+          store: this.market
+        }
+      });
+      this.link = response.data; 
+    },
+
+    goToStore() {
+    // Проверка и нормализация URL
+    let url = this.link;
+    if (!url.match(/^https?:\/\//i)) {
+      url = 'https://' + url;
+    }
+    
+    // Открытие в новом окне
+    window.open(url, '_blank', 'noopener,noreferrer');
+  },
+
     closeModal() {
       this.isOpenModal = false;
     },
-    formatedDate(a) {
-      const date = new Date(a);
-      return date.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-    },
+    
+    
     copyText() {
       navigator.clipboard.writeText(this.code);
       alert('Промокод скопирован');
-    }
+    },
   }
 }
 </script>

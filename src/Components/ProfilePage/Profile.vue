@@ -1,9 +1,4 @@
 <style scoped>
- *{
-    font-size: 16px;
-    font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
- }
-
   .form__registForm{
     display: flex;
     justify-content: space-around;
@@ -38,6 +33,9 @@
 
   .menu {
     width: 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   }
 
   .divsForm {
@@ -79,6 +77,75 @@
     color: #555;
     font-size: 16px;
   }
+
+  input:focus {
+    border-color:#1f38af;
+  }
+
+input {
+  height: 25px;
+  border: 1px solid #ddd;
+  width: 240px;
+  border-radius: 10px;
+  padding: 0 5px;
+  margin-left: 15px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.submit-btn {
+  padding: 10px 30px;
+  border-radius: 10px;
+  border: none;   
+  transition: background-color 0.5s ease;
+}
+
+.submit-btn:hover {
+  background-color: #6b81e4;  
+}
+
+@media screen and (max-width: 576px) {
+
+  .form__registForm {
+    max-width: 250px;
+    max-height: 500px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .container__title {
+    font-size: 0.9rem;
+  }
+
+  label {
+    font-size: 0.7rem;
+  }
+
+  .info {
+    font-size: 0.75rem;
+  }
+
+  .menu {
+    width: 50px;
+    margin-right: 15px;
+  }
+
+  input {
+    width: 100%;
+    font-size: 0.6rem;
+  }
+
+  .submit-btn {
+    padding: 5px;
+    font-size: 0.9rem;
+  }
+  
+  }
 </style>
 
 <template>
@@ -96,13 +163,11 @@
           <div class="row"><label for="birthdate">Дата рождения: </label><label for="birthdate" class = "info">{{ formatedDate(birthdate) }}</label></div>
         </div>
         <div class = "divsForm" v-else-if="activeTab === 'editing'">
-          <div class="row"><label for="email">Email <input type="email" name="email" class = "input"></label></div>
-          <div class="row"><label for=""><a href="">Забыли пароль?</a></label></div>
-          <button class="submit-btn">Зарегистрироваться</button>
-        </div>
-        <div class="divsForm" v-else-if="activeTab === 'mainMenu'">
-          <div class="row"><label for="email">Email <input type="email" name="email" class = "input"></label></div>
-          <button class="submit-btn">Зарегистрироваться</button>
+          <div class="row"><label for="email">Email: </label><input type="email" name="email" class = "input" v-model="email"></div>
+          <div class="row"><label for="name">Имя: </label><input type="text" name="name" class = "input" v-model="name"></div>
+          <div class="row"><label for="role">Роль: </label><label for="name" class = "info">{{ role }}</label></div>
+          <div class="row"><label for="birthdate">Дата рождения: </label><input type="date" name="birthdate" class = "input" v-model="birthdate"></div>
+          <button class="submit-btn" @click="updateUserData">Обновить данные</button>
         </div>
       </div>
     </section>
@@ -133,20 +198,46 @@ export default {
         email.value = userData.email;
         role.value = userData.role;
         birthdate.value = userData.date_of_birth;
-  } catch (error) {
-    console.error('Полная ошибка:', error);
-    console.error('Ответ сервера:', error.response?.data);
-    };
+     } catch (error) {
+      console.error('Полная ошибка:', error);
+      console.error('Ответ сервера:', error.response?.data);
+     };
   };
 
-  const formatedDate = (a) =>{
-      const date = new Date(a);
-      return date.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
+  const formatedDate = (a) => {
+    const date = new Date(a);
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const updateUserData = async() => {
+    try {
+    const tokenResponse = await axios.get('http://localhost:3000/token', { 
+      withCredentials: true 
+    });
+    
+    const userId = tokenResponse.data.id;
+
+    const response = await axios.patch(`http://localhost:3000/profile/change/${userId}`,{
+      email: email.value,
+      name: name.value,
+      date_of_birth: birthdate.value || '',
+    },{ withCredentials: true }
+  );
+
+    if (response.data.success) {
+      alert('Данные успешно обновлены');
+      await showUserData();
+      activeTab.value = 'profile';
     };
+  } catch (error) {
+    console.error('Ошибка при обновлении:', error);
+    alert(error.response?.data?.message || 'Ошибка при обновлении данных');
+  }
+  };
 
     const changeTab = (tab) => {
       activeTab.value = tab;
@@ -160,8 +251,9 @@ export default {
       email,
       role,
       birthdate,
-      changeTab,
       formatedDate,
+      updateUserData,
+      changeTab,
       showUserData,
     }
   }

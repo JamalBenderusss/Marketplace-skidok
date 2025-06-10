@@ -1,9 +1,4 @@
 <style scoped>
- *{
-    font-size:16px;
-    font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-  }
-
   .registForm{
     display: flex;
     justify-content: center;
@@ -131,11 +126,78 @@
    cursor: pointer;
    background: url(/images/icon-close.svg) center no-repeat;
  }
+
+ small {
+   color: #666;
+   font-size: 0.8em;
+   margin-top: 2px;
+ }
+
+ .error {
+   border-color: #ff4444 !important;
+ }
+
+ .error-text {
+   color: #ff4444;
+   font-size: 0.8em;
+   margin-top: 4px;
+ }
+
+ .form__title {
+  margin: 0 0 10px; 
+  font-size:28px;
+ }
+
+ @media screen and (max-width: 576px) {
+  .form__title {
+    font-size: 0.9rem;
+  }
+
+  .form {
+    width: 200px;
+  }
+
+  .divsForm {
+    width: 200px;
+  }
+
+  .simpleBtn {
+    padding: 5px;
+    font-size: 0.6rem;
+  } 
+
+  label {
+    font-size: 0.7rem;  
+  }
+
+  .input {
+    width: 140px;
+    padding: 5px;
+    font-size: 0.6rem;
+  }
+
+  .submit-btn {
+    padding: 5px;
+    font-size: 0.7rem;
+  }
+
+  .error-text {
+    font-size: 0.5rem;
+    margin-top: 2px;
+  }
+
+  .popup-close {
+    top: -90px;
+    right: -195px;
+    width: 20px;
+    height: 20px;
+  }
+ }
 </style>
 
 <template>
     <section class = "form">
-      <h1 style="margin: 0 0 10px; font-size:28px;">
+      <h1 class="form__title">
         Личный кабинет
       </h1>
       <form class = "registForm" @submit.prevent="handleLogin">
@@ -148,8 +210,12 @@
           >Вход</button>
       </div>
       <div class="popup-close" @click="$router.push('/')" />
-      <div class="row"><label for="email">Email<input type="email" name="email" class = "input" v-model="email"></label></div>
-      <div class="row"><label for="password">Пароль<input type="password" name="password" class = "input" v-model="password"></label></div>
+      <div class="row"><label for="email">Email<input type="email" name="email" class = "input" v-model="email" :class="{ error : errors.email }"></label>
+        <small class="error-text" v-if="errors.email">{{ errors.email }}</small>
+      </div>
+      <div class="row"><label for="password">Пароль<input type="password" name="password" class = "input" v-model="password" :class="{ error : errors.password }"></label>
+        <small class="error-text" v-if="errors.password">{{ errors.password }}</small>
+      </div>
       <div class="row"><label for=""><a href="">Забыли пароль?</a></label></div>
       <button class="submit-btn" >Войти</button>
     </div>
@@ -170,9 +236,24 @@ export default {
     const isCategory = ref(false);
     const email = ref('');
     const password = ref('');
+    const errors = ref({});
+
+    const validate = () => {
+      errors.value = {};
+
+      if (!email.value) errors.value.email = 'Заполните поле';
+      if (!password.value) errors.value.password = 'Заполните поле';
+
+      return Object.keys(errors.value).length === 0;
+    }
 
     const handleLogin = async () => {
       try {
+        if(!validate()) {
+          alert('Заполните все поля!');
+          return;
+        }
+
         const response = await axios.post('http://localhost:3000/api/login', {
           email: email.value,
           password: password.value,
@@ -199,6 +280,8 @@ export default {
     return {
       selectedBtn,
       isCategory,
+      errors,
+      validate,
       email,
       password,
       handleLogin,

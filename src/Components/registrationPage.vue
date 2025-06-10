@@ -1,9 +1,4 @@
 <style scoped>
- *{
-    font-size: 16px;
-    font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-  }
-
  .form__title {
    margin: 0 0 10px;
    font-size:28px;
@@ -142,6 +137,52 @@
    font-size: 0.8em;
    margin-top: 4px;
  }
+
+ @media screen and (max-width: 576px) {
+  .form__title {
+    font-size: 0.9rem;
+  }
+
+  .form {
+    width: 200px;
+  }
+
+  .form__divsForm {
+    width: 200px;
+  }
+
+  .simpleBtn {
+    padding: 5px;
+    font-size: 0.6rem;
+  } 
+
+  label {
+    font-size: 0.7rem;  
+  }
+
+  .input {
+    width: 90px;
+    padding: 5px;
+    font-size: 0.7rem;
+  }
+
+  .submit-btn {
+    padding: 5px;
+    font-size: 0.7rem;
+  }
+
+  .error-text {
+    font-size: 0.5rem;
+    margin-top: 2px;
+  }
+
+  .popup-close {
+    top: -90px;
+    right: -195px;
+    width: 20px;
+    height: 20px;
+  }
+ }
 </style>
 
 <template>
@@ -183,8 +224,6 @@
 <script>
 import axios from 'axios';
 import { ref } from 'vue';
-
-// axios.defaults.baseURL = 'http://localhost:3000';
 
 export default {
   setup() {

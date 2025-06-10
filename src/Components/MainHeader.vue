@@ -20,6 +20,7 @@ export default {
     
     const search = () => {
       emit('search', searchValue.value);
+      searchValue.value = '';
     }
 
     const fetchCategories = async () => {
@@ -64,11 +65,10 @@ export default {
               </li>
             </ul>
           </div>
-        </div><div>
+        </div>
         <div class = "nav n3" @click="toggleShowPromotion">Как пользоваться промокодами</div>
-      </div>
         <div class = "nav-center2">
-          <input type="text" placeholder="Введите нужный магазин" v-model = "searchValue" @keyup.enter = "search">
+          <input type="text" placeholder="Введите описание" v-model = "searchValue" @keyup.enter = "search">
           <button @click = "search">Найти</button>
         </div>
       </div>
@@ -89,32 +89,35 @@ header {
   position: sticky;
   top: 0;
   z-index: 1001;
-  background-color: #6b81e4;
+  background-color: #344665;
   text-align: center;
   margin-bottom: 20px;
-
+  color: #cbd5e1;
 }
 
 nav {
   display: flex;
   justify-content: space-between;
   width: 80%;
+  cursor: pointer;
 }
 
 .n1:hover,.n2:hover,.n3:hover,.n4:hover{
   color: #fff;
 }
 
-.nav {
-  cursor: pointer;
+.n1 > button, .n2, .n3, .nav-center2 > input, .n4 > button {
+  font-size: 1rem;
 }
 
 .nav-center {
   display: flex;
+  position: relative;
   justify-content: space-between;
   width: 75%;
   min-width: 650px;
 }
+
 .nav-center2 {
   display: flex;
   justify-content: space-between;
@@ -160,6 +163,7 @@ nav {
   border: none;
   background-color: transparent;
   cursor: pointer;
+  color: #cbd5e1;
 }
 
 .regBtn:hover {
@@ -169,7 +173,9 @@ nav {
 .n1 > button {
   border: none;
   background-color: transparent;
+  color: #cbd5e1;
 }
+
 .n1 > button:hover {
   color: white;
 }
@@ -188,13 +194,6 @@ nav {
   height: 250px;
 }
 
-.submenu ul {
-  list-style:none ;
-  margin: 0;
-  padding: 0;
-  column-count: 3;
-}
-
 .submenu li {
   margin: 0 0 18px;
   text-align: left;
@@ -206,6 +205,13 @@ nav {
   cursor: pointer;
   background-color: transparent;
   transition: background 0.3s ease;
+}
+
+.submenu ul {
+  list-style:none ;
+  margin: 0;
+  padding: 0;
+  column-count: 3;
 }
 
 .submenu button:hover {
@@ -235,9 +241,111 @@ nav {
   margin-right: 10px;
 }
 
-.nav-center {
-  position: relative;
+@media screen and (max-width: 576px)  {
+  nav {
+    width: 94%;
+  }
+
+  .n3, .nav-center2 {
+    display: none;
+  }
+
+  .nav-center {
+    min-width: auto;
+    justify-content: space-between;
+    width: auto;
+  }
+
+  .n1 > button, .n2, .n3, .nav-center2 > input, .n4 > button {
+    font-size: 0.7rem;
+  }
+
+  .nav-center2 {
+    width: 290px;
+  }
+
+  .categoryDiv {
+    padding-top: 2px;
+  }
+
+  .submenu {
+  position: absolute;
+  top: 100%;
+  left: -100px;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-shadow: -9px 0 5px  rgba(0, 0, 0, .25 );;
+  padding: 10px;
+  z-index: 100;
+  width: 230px;
+  height: 200px;
 }
 
+.submenu li {
+  margin: 0 0 10px;
+  font-size: 0.6rem;
+  text-align: left;
+}
 
+.submenu li button {
+  font-size: 0.6rem;
+}
+}
+
+@media screen and (min-width: 576px) and (max-width: 1000px) {
+  nav {
+    width: 94%;
+  }
+
+  .n3, .promoModal {
+    display: none;
+  }
+
+  .nav-center {
+    min-width: auto;
+    justify-content: space-between;
+  }
+
+  .n1 > button, .n2, .n3, .nav-center2 > input, .n4 > button {
+    font-size: 0.9rem;
+  }
+
+  .nav-center2 > input {
+    width: 190px;
+  }
+
+  .nav-center2 {
+    width: 290px;
+  }
+
+  .categoryDiv {
+    padding-top: 2px;
+  }
+
+  .submenu {
+  position: absolute;
+  top: 100%;
+  left: -60px;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-shadow: -9px 0 5px  rgba(0, 0, 0, .25 );;
+  padding: 10px;
+  z-index: 100;
+  width: 450px;
+  height: 250px;
+}
+
+.submenu li {
+  margin: 0 0 15px;
+  text-align: left;
+  font-size: 0.9rem;
+  
+}
+
+.submenu li button {
+  font-size: 0.9rem;
+}
+}
 </style>

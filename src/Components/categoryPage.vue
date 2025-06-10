@@ -1,9 +1,4 @@
 <style scoped>
-* {
-  font-size: 16px;
-  font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-}
-
 main {
   width: 100%;
 }
@@ -17,9 +12,9 @@ main {
   width: 60%;
   border: none;
   border-radius: 10px;
-  height: 130px;
+  height: 150px;
   display: flex;
-  background-color: #6b81e4;
+  background-color: #5978aa;
   min-width: 650px;
 }
 
@@ -28,7 +23,7 @@ main {
   border-radius: 10px;
   background-color: #fff;
   margin: auto;
-  height: 100px;
+  height: 120px;
   padding: 5px;
 }
 
@@ -96,6 +91,63 @@ a {
 .loginDiv__title {
   margin-bottom: 20px;
 }
+
+.title {
+  text-align: center; margin-bottom: 20px; font-size:28px;
+}
+
+.blueBlock h2 {
+    font-size: 1.3rem;
+  }
+
+  .blueBlock p {
+    font-size: 0.9rem; 
+    text-align: left;
+    line-height: 1.3rem;
+    width: 90%;
+    margin: auto;
+  }
+
+
+@media screen and (max-width: 576px) {
+  .title {
+    font-size: 1rem;
+  }
+
+  .simpleBtn {
+  font-size: 0.65rem;
+  padding: 5px;
+  }
+
+  .promotions {
+    margin: 0 0 20px; 
+    justify-content: space-around;
+  }
+
+  section {
+    width: 90%;
+  }
+
+  .showMore {
+    font-size: 0.65rem;
+    width: 180px;
+  }
+} 
+
+@media screen and (min-width: 576px) and (max-width: 1000px){
+
+  .simpleBtn {
+    font-size: 0.9rem;
+  }
+
+  section {
+    width: 90%;
+  }
+
+  .showMore {
+  font-size: 1rem;
+  }
+}
 </style>
 
 <template>
@@ -105,14 +157,14 @@ a {
       <div class="whitebl" v-show="isOpen">
         <div class="blueBlock">
           <h2>Как использовать промокоды?</h2>
-          <p>1. Выберите предложенный промокод и скопируйте его. </p>
-          <p>2. Перейдите в интернет-магазин с помощью нашей ссылки. </p>
-          <p>3. Добавьте товары в корзину, введите промокод на этапе оформления заказа. </p>
-          <p>4. Наслаждайтесь скидкой!</p>
+          <p>1. Выберите предложенный промокод и скопируйте его. <br>
+2. Перейдите в интернет-магазин с помощью нашей ссылки. <br>
+3. Добавьте товары в корзину, введите промокод на этапе оформления заказа. <br> 
+4. Наслаждайтесь скидкой!</p>
         </div>
       </div>
     </section>
-    <h1 style="text-align: center; margin-bottom: 20px; font-size:28px;">Промокоды в разделе "{{ categoryName }}"</h1>
+    <h1 class="title">Промокоды в разделе "{{ categoryName }}"</h1>
     <section class="promotions">
       <div class="btn3">
         <button class="simpleBtn" 
@@ -124,6 +176,9 @@ a {
         <button class="simpleBtn"
           :class="{focus: selectedBtn === 'first'}"
           @click="changeBtn('first')">Только скидки</button>
+        <button class = "simpleBtn"
+        :class = "{focus: selectedBtn === 'best'}"
+        @click = "changeBtn('best')">Лучшие</button>  
       </div>
     </section>
     <div v-if="userRole <= 2" class="loginDiv">
@@ -132,7 +187,7 @@ a {
     </div>
     <section v-else>
       <card
-        v-for="promo in filtredDiscounts.slice(0, visibleCount)"
+        v-for="promo in visibleDiscounts"
         :key="promo.Promotion_id"
         :title="promo.title"
         :description="promo.description"
@@ -153,7 +208,7 @@ a {
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import Card from '@/Components/card.vue';
@@ -215,14 +270,23 @@ export default {
       visibleCount.value += addCard.value;
     };
 
+    const visibleDiscounts = computed(() =>  {
+      if (selectedBtn.value === 'best') {
+        return [...filtredDiscounts.value].sort(compareDiscounts).slice(0, visibleCount.value)
+      } else {
+        return filtredDiscounts.value.slice(0, visibleCount.value);
+      }
+    });
+
     const searchCardsByInput = (searchValue) => {
+      changeBtn('');
       const result = searchValue.toLowerCase().trim();
       
       filtredDiscounts.value = promotions.value.filter((card) => 
-        card.store_name.toLowerCase().includes(result)
+        card.full_description.toLowerCase().includes(result)
       );
       if (filtredDiscounts.value.length === 0) {
-        alert('Введите действительное название магазина');
+        alert('Нету промокодов с таким описанием');
         filtredDiscounts.value = promotions.value;
       }
     };
@@ -244,6 +308,13 @@ export default {
           card.title === 'Скидка'
         );
       }
+    };
+
+    const compareDiscounts = (a, b) => {
+      if (a.discount_type === '%' && b.discount_type !== '%') return -1;
+      if (a.discount_type !== '%' && b.discount_type === '%') return 1; 
+
+      return b.discount_value - a.discount_value;
     };
 
     onMounted(async () => {
@@ -272,6 +343,8 @@ export default {
       loadCategoryPromotions,
       toggleShowPromo,
       changeBtn,
+      visibleDiscounts,
+      compareDiscounts,
     }
   }
 }

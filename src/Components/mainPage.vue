@@ -12,9 +12,9 @@
     width: 70%;
     border: none;
     border-radius: 10px;
-    height: 130px;
+    height: 150px;
     display: flex;
-    background-color: #6b81e4;
+    background-color: #5978aa;
     min-width: 650px;
   }
 
@@ -23,7 +23,7 @@
     border-radius: 10px;
     background-color: #fff;
     margin: auto;
-    height: 100px;
+    height: 120px;
     padding: 5px;
 
   }
@@ -82,7 +82,6 @@
     padding: 10px 10px;
     font-weight: bold;
     transition: background-color 0.3s ease, color 0.3s ease;
-
   }
 
   .promotions {
@@ -99,6 +98,63 @@
 .loginDiv__title {
   margin-bottom: 20px;
 }
+
+.title {
+  text-align: center; margin-bottom: 20px; font-size:28px;
+}
+
+.blueBlock h2 {
+    font-size: 1.3rem;
+  }
+
+  .blueBlock p {
+    font-size: 0.9rem; 
+    text-align: left;
+    line-height: 1.3rem;
+    width: 90%;
+    margin: auto;
+  }
+
+
+@media screen and (max-width: 576px) {
+  .title {
+    font-size: 1rem;
+  }
+
+  .simpleBtn {
+  font-size: 0.65rem;
+  padding: 5px;
+  }
+
+  .promotions {
+    margin: 0 0 20px; 
+    justify-content: space-around;
+  }
+
+  section {
+    width: 90%;
+  }
+
+  .showMore {
+    font-size: 0.65rem;
+    width: 180px;
+  }
+} 
+
+@media screen and (min-width: 576px) and (max-width: 1000px){
+
+  .simpleBtn {
+    font-size: 0.9rem;
+  }
+
+  section {
+    width: 90%;
+  }
+
+  .showMore {
+  font-size: 1rem;
+  }
+}
 </style>
 
 <template>
@@ -108,14 +164,14 @@
       <div class = "whitebl" v-show = "isOpen">
         <div class = "blueBlock">
           <h2>Как использовать промокоды?</h2>
-          <p>1. Выберите предложенный промокод и скопируйте его. </p>
-          <p>2. Перейдите в интернет-магазин с помощью нашей ссылки. </p>
-          <p>3. Добавьте товары в корзину, введите промокод на этапе оформления заказа. </p>
-          <p>4. Наслаждайтесь скидкой!</p>
+          <p>1. Выберите предложенный промокод и скопируйте его. <br>
+2. Перейдите в интернет-магазин с помощью нашей ссылки. <br>
+3. Добавьте товары в корзину, введите промокод на этапе оформления заказа. <br> 
+4. Наслаждайтесь скидкой!</p>
         </div>
         </div>
     </section>
-    <h1 style="text-align: center; margin-bottom: 20px; font-size:28px" @click = "fetchDiscounts">Свежие промокоды</h1>
+    <h1 class="title" @click = "fetchDiscounts">Свежие промокоды</h1>
     <section class = "promotions">
       <div class = "btn3">
         <button class = "simpleBtn" 
@@ -127,6 +183,9 @@
         <button class = "simpleBtn"
         :class = "{focus: selectedBtn === 'first'}"
         @click = "changeBtn('first')">Только скидки</button>
+        <button class = "simpleBtn"
+        :class = "{focus: selectedBtn === 'best'}"
+        @click = "changeBtn('best')">Лучшие</button>
       </div>
     </section>
     <div v-if="userRole <= 2" class="loginDiv">
@@ -184,6 +243,7 @@ export default {
       try{
         const response = await axios.get('http://localhost:3000/token', { withCredentials: true });
         const userData = response.data;
+        console.log(userData);
         userRole.value = userData.roles_id;
       }
       catch(e){
@@ -210,9 +270,13 @@ export default {
     };
 
     // Отфильтрованные скидки, видимые пользователю
-    const visibleDiscounts = computed(() =>
-        filtredDiscounts.value.slice(0, visibleCount.value)
-    );
+    const visibleDiscounts = computed(() =>  {
+      if (selectedBtn.value === 'best') {
+        return [...filtredDiscounts.value].sort(compareDiscounts).slice(0, visibleCount.value)
+      } else {
+        return filtredDiscounts.value.slice(0, visibleCount.value);
+      }
+    });
 
     // Функция для загрузки большего количества карточек
     const loadMore = () => {
@@ -222,13 +286,14 @@ export default {
     // Поиск карточек по вводу
     const searchCardsByInput = (search) => {
       const result = search.toLowerCase().trim();
-      filtredDiscounts.value = discounts.value.filter((card) =>
-          card.store_name.toLowerCase().includes(result)
+      filtredDiscounts.value = visibleDiscounts.value.filter((card) =>
+          card.full_description.toLowerCase().includes(result)
       );
 
       if (filtredDiscounts.value.length === 0) {
-        alert('Введите действительное название магазина');
+        alert('Введите действительное описание магазина');
         filtredDiscounts.value = discounts.value;
+        changeBtn('all');
       }
     };
 
@@ -247,6 +312,13 @@ export default {
         );
       }
     };
+
+    const compareDiscounts = (a, b) => {
+      if (a.discount_type === '%' && b.discount_type !== '%') return -1;
+      if (a.discount_type !== '%' && b.discount_type === '%') return 1; 
+
+      return b.discount_value - a.discount_value;
+};
 
     // Вызов fetchDiscounts при монтировании
     onMounted(async () => {
@@ -268,9 +340,11 @@ export default {
       isLoadingUser,
       userRole,
       fetchDiscounts,
+      compareDiscounts,
       loadMore,
       searchCardsByInput,
       changeBtn,
+      compareDiscounts,
       toggleShowPromo,
     };
   },

@@ -12,13 +12,13 @@ import bcrypt from 'bcryptjs';
 
 dotenv.config({path:'../.env'});
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 const allTables = ['Promotions','Stores','Users','roles','comments','category'];
 const corsOptions = {
     origin: process.env.FRONTEND_URL,
-    methods: 'GET,POST,PUT,DELETE',
+    methods: 'GET,POST,PATCH,PUT,DELETE',
     credentials: true,
-    allowedHeaders: 'Content-Type',
+    allowedHeaders: ['Content-Type','Authorization','Cache-Control'],
 };
 
 const transporter = nodemailer.createTransport({
@@ -64,37 +64,72 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function item(table, res) {
-    if(!allTables.includes(table)){
-        return res.status(400).send('Таблица не найдена');
-    }
+    try {
+        if(!allTables.includes(table)) {
+            return res.status(400).send('Таблица не найдена');
+        }
 
-    if (table === 'Promotions'){
-        const [rows] = await pool.query(`
-            SELECT 
-                p.code, 
-                p.description, 
-                p.discount_value, 
-                p.discount_type, 
-                p.start_date, 
-                p.end_date, 
-                p.Promotion_id, 
-                p.image,
-                p.title,
-                p.full_description,
-                s.name AS store_name,
-                GROUP_CONCAT(c.name) AS categories
-            FROM Promotions p
-            JOIN Stores s ON p.Stores_id = s.Store_id
-            LEFT JOIN category_has_Promotions chp ON p.Promotion_id = chp.Promotions_Promotion_id
-            LEFT JOIN category c ON chp.category_category_id = c.category_id
-            GROUP BY p.Promotion_id
-        `);
-        res.status(200).json(rows);
-    }else{
-        const [rows] = await pool.query(`SELECT * FROM ${table}`);
-        res.status(200).json(rows);
+        let rows;
+
+        const [result] = await pool.query('DELETE FROM Promotions WHERE end_date < CURDATE()');
+        
+        if (table === 'Users') {
+            [rows] = await pool.query('SELECT * FROM Users');
+            const processedRows = rows.map(row => ({
+                ...row,
+                Password: '********' // Маскируем пароль
+            }));
+            return res.status(200).json(processedRows);
+        }
+        
+        if (table === 'Promotions') {
+            [rows] = await pool.query(`
+                SELECT 
+                    p.*,
+                    s.name AS store_name,
+                    JSON_ARRAYAGG(c.name) AS categories_array
+                FROM Promotions p
+                JOIN Stores s ON p.Stores_id = s.Store_id
+                LEFT JOIN category_has_Promotions chp ON p.Promotion_id = chp.Promotions_Promotion_id
+                LEFT JOIN category c ON chp.category_category_id = c.category_id
+                WHERE p.end_date >= CURDATE()
+                GROUP BY p.Promotion_id
+            `);
+            
+            const processedRows = rows.map(row => ({
+                ...row,
+                categories_array: row.categories_array 
+                    ? JSON.parse(row.categories_array).join(', ') 
+                    : 'Нет категорий'
+            }));
+            
+            return res.status(200).json(processedRows);
+        }
+        
+        // Для всех остальных таблиц
+        [rows] = await pool.query(`SELECT * FROM ${table}`);
+        return res.status(200).json(rows);
+        
+    } catch (error) {
+        console.error(`Ошибка при запросе к таблице ${table}:`, error);
+        return res.status(500).json({ 
+            error: 'Внутренняя ошибка сервера',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
-}
+};
+
+app.get('/api/getLinkStore', async (req, res) => {
+    try {
+        const { store } = req.query;
+        const response = await pool.query('SELECT link FROM Stores WHERE name = ?', [store]);
+        const link = response[0][0].link;
+        res.status(200).json(link);
+    } catch (error) {
+        console.error('Ошибка при получении списка магазинов:', error);
+        res.status(500).json({ error: 'Ошибка при получении списка магазинов' });
+    }
+});
 
 app.get('/api/images', async (req, res) => {
     try {
@@ -104,14 +139,6 @@ app.get('/api/images', async (req, res) => {
             ['.jpg', '.jpeg', '.png'].includes(path.extname(file).toLowerCase())
         );
         res.status(200).json(images.map(filename => ({ image: filename })));
-        await fs.writeFile(path.join(imageDir,'1.txt'), 'Фотографии загрузились!',(err) => {
-            if (err) {
-                console.log(err);
-                return;
-            }else {
-                console.log('Файл записан');
-            }
-        });
     } catch (error) {
         console.error('Ошибка при чтении директории с изображениями:', error);
         res.status(500).json({ error: 'Ошибка при получении списка изображений' });
@@ -159,7 +186,7 @@ app.post('/api/addPromo', async(req,res) => {
                 )
             );
             await Promise.all(categoryQueries);
-        }
+        };
 
         res.status(200).json({ success: true, id: promoId });
     } catch (error) {
@@ -170,6 +197,156 @@ app.post('/api/addPromo', async(req,res) => {
         });
     }
 });
+
+app.put('/api/updatePromo', async (req, res) => {
+    try {
+      const {
+        id,
+        code,
+        title,
+        description,
+        full_description,
+        discount_type,
+        discount_value,
+        start_date,
+        end_date,
+        image,
+        categories,
+        store_id
+      } = req.body;
+  
+      // Обновление самой акции
+      const [promoResult] = await pool.query(
+        `UPDATE Promotions 
+         SET code = ?, title = ?, description = ?, full_description = ?, 
+             discount_type = ?, discount_value = ?, start_date = ?, end_date = ?, image = ?, Stores_id = ?
+         WHERE Promotion_id = ?`,
+        [code, title, description, full_description, discount_type,
+          discount_value, start_date, end_date, image, store_id, id]
+      );
+
+      // Удаление старых категорий
+      await pool.query(
+        `DELETE FROM category_has_Promotions WHERE Promotions_Promotion_id = ?`,
+        [id]
+      );
+  
+      // Добавление новых категорий
+      if (categories && categories.length > 0) {
+        const categoryQueries = categories.map(categoryId =>
+          pool.query(
+            `INSERT INTO category_has_Promotions (category_category_id, Promotions_Promotion_id) 
+             VALUES (?, ?)`,
+            [categoryId, id] 
+          )
+        );
+        await Promise.all(categoryQueries);
+      }
+  
+      res.status(200).json({ success: true, id });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при обновлении промокода'
+      });
+    }
+  });
+
+app.post('/api/addStore', async (req, res) => {
+    try{
+        const { name, description, link, contacts } = req.body;
+        const [result] = await pool.query(
+            `INSERT INTO Stores (name, description, link, contacts) VALUES (?, ?, ?, ?)`,
+            [name, description, link, contacts]
+        );
+        res.status(200).json({ success: true, id: result.insertId });
+    }catch(e) {
+        console.error(e);
+        res.status(404).json({success: false, message: 'Ошибка при добавлении магазина'});
+    }
+}); 
+
+app.put('/api/editStore', async (req, res) => {
+    try{
+        const { id, name, description, link, contacts } = req.body;
+        const [result] = await pool.query(
+            `UPDATE Stores SET name = ?, description = ?, link = ?, contacts = ? WHERE Store_id = ?`,
+            [name, description, link, contacts, id]
+        );
+        res.status(200).json({ success: true, id: result.insertId });
+    }catch(e) {
+        console.error(e);
+        res.status(404).json({success: false, message: 'Ошибка при изменении магазина'});
+    }
+});
+
+app.put('/api/changeRole', async (req, res) => {
+    try {
+        const { id, role } = req.body; 
+        const [result] = await pool.query(
+            `UPDATE Users SET roles_id = ? WHERE user_id = ?`,
+            [role, id]
+        );
+        res.status(200).json({ success: true, id });
+    }catch(e) {
+        console.error(e);
+        res.status(404).json({success: false, message: 'Ошибка при изменении роли'});
+    }
+});
+
+app.put('/api/setStoreOfManager', async (req, res) => {
+    try {
+        const { id, role, store } = req.body;
+        const [result] = await pool.query(
+            `UPDATE Users SET roles_id = ? WHERE user_id = ?`,
+            [role, id]
+        );
+
+        const [result2] = await pool.query(
+            `UPDATE userStores SET Stores_id = ? WHERE user_id = ?`,
+            [store, id]
+        );
+        res.status(200).json({ success: true, id });
+    }catch(e) {
+        console.error(e);
+        res.status(404).json({success: false, message: 'Ошибка при создании связи между менеджером и магазином'});
+    }
+});
+
+app.post('/api/addCategory', async (req, res) => {
+    try {
+        const { name } = req.body;
+        const [result] = await pool.query(
+            'INSERT INTO category (name) VALUES (?)',
+            [name]
+        );
+        res.status(200).json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Ошибка при добавлении категории'
+        });
+    }
+});
+
+app.put('/api/editCategory', async (req, res) => {
+    try {
+        const { id, name } = req.body;
+        const [result] = await pool.query(
+            'UPDATE category SET name = ? WHERE category_id = ?',
+            [name, id]
+        );
+        res.status(200).json({ success: true, id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'Ошибка при редактировании категории'
+        });
+    }
+})
 
 app.post('/api/registration', async(req,res) => {
     try {
@@ -202,7 +379,7 @@ app.post('/api/registration', async(req,res) => {
         const [result] = await pool.query(
             `INSERT INTO Users (email, Password, name, email_verified, roles_id, date_of_birth) 
             VALUES (?, ?, ?, ?, ?, ?)`,
-            [email, hashedPassword, name, 0, 2, birthday]
+            [email, hashedPassword, name, 0, 3, birthday]
         );
 
 
@@ -211,6 +388,12 @@ app.post('/api/registration', async(req,res) => {
             'SELECT * FROM Users WHERE user_id = ?',
             [result.insertId]
         );
+
+        await pool.query(
+            `INSERT INTO userStores (user_id, Stores_id) VALUES (?, ?)`,
+            [newUser[0].user_id, 1]
+        );
+      
 
         const token = jwt.sign({ email }, process.env.JWT_SECRET, {expiresIn: '24h'});
         const verifyLink = `${process.env.BACKEND_URL}/api/account/verify-email?token=${token}`;
@@ -234,6 +417,7 @@ app.post('/api/registration', async(req,res) => {
             
             // Удаляем пользователя, если письмо не отправилось
             await pool.query('DELETE FROM Users WHERE user_id = ?', [result.insertId]);
+            await pool.query('DELETE FROM userStores WHERE user_id = ?', [result.insertId]);
             
             return res.status(500).json({
                 success: false,
@@ -242,13 +426,11 @@ app.post('/api/registration', async(req,res) => {
         }
 
     } catch (error) {
-        if (!res.headersSent) {
-            return res.status(500).json({
+         res.status(500).json({
                 success: false,
-                message: 'Ошибка сервера',
+                message: 'Ошибка сервера',error,
                 error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
-        }
     }
 });
 
@@ -305,7 +487,7 @@ app.get('/api/account/verify-email', async (req, res) => {
         const { token } = req.query;
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         await pool.query(
-            'UPDATE Users SET email_verified = 1, roles_id = 3 WHERE email = ?',
+            'UPDATE Users SET email_verified = 1 WHERE email = ?',
             [decoded.email]
         );
 
@@ -318,6 +500,8 @@ app.get('/api/account/verify-email', async (req, res) => {
         });
     }
 });
+
+
 
 app.post('/logout', async (req, res) => {
     try {
@@ -385,7 +569,106 @@ app.get('/profile/me', async (req, res) => {
     } catch (error) {
         res.status(400).json({success: false, message: 'Ошибка при получении пользователя'});
     }
-})
+});
+
+app.patch('/profile/change/:id', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { email, name, date_of_birth } = req.body;
+
+        // Проверка существования пользователя
+        const [users] = await pool.query(
+            'SELECT * FROM Users WHERE user_id = ?', 
+            [userId]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Пользователь не найден' 
+            });
+        }
+        
+        const user = users[0];
+        const updates = {};
+        
+        // Валидация email
+        if (email !== undefined && email !== '') {
+            if (email !== user.email) {
+                const [existing] = await pool.query(
+                    'SELECT user_id FROM Users WHERE email = ? AND user_id != ?',
+                    [email, userId]
+                );
+                
+                if (existing.length > 0) {
+                    return res.status(409).json({ 
+                        success: false, 
+                        message: 'Email уже используется другим пользователем' 
+                    });
+                }
+                updates.email = email;
+            }
+        }
+        
+        // Валидация имени
+        if (name !== undefined && name !== '' && name !== user.name) {
+            if (name.length < 2 || name.length > 50) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Имя должно быть от 2 до 50 символов'
+                });
+            }
+            updates.name = name;
+        }
+        
+        // Валидация даты рождения
+        if (date_of_birth !== undefined && date_of_birth !== '') {
+            const birthDate = new Date(date_of_birth);
+            if (isNaN(birthDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Некорректный формат даты'
+                });
+            }
+            updates.date_of_birth = date_of_birth;
+        }
+        
+        // Если нет изменений
+        if (Object.keys(updates).length === 0) {
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Нет изменений для обновления',
+                user: user
+            });
+        }
+        
+        // Обновление в базе данных
+        await pool.query(
+            'UPDATE Users SET ? WHERE user_id = ?',
+            [updates, userId]
+        );
+        
+        // Получение обновленных данных
+        const [updatedUser] = await pool.query(
+            'SELECT * FROM Users WHERE user_id = ?',
+            [userId]
+        );
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'Данные успешно обновлены',
+            user: updatedUser[0]
+        });
+        
+    } catch (error) {
+        console.error('Ошибка при обновлении пользователя:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Внутренняя ошибка сервера',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 
 app.get('/token', async (req, res) => {
     const token = req.cookies.refreshToken;
@@ -393,16 +676,20 @@ app.get('/token', async (req, res) => {
 
     try {
         const payload = jwt.verify(token,process.env.JWT_REFRESH_SECRET);
+        const [rows] = await pool.query(
+            'SELECT * FROM Users WHERE user_id = ?',
+            [payload.userId]
+        );
         res.json({
             success: true,
             id: payload.userId,
-            roles_id: payload.roles_id
+            roles_id: rows[0].roles_id
         })
     }
     catch(err) {
         res.sendStatus(403);
     }
-})
+});
 
 // Получение информации о категории по ID
 app.get('/api/category/:id', async (req, res) => {
@@ -452,20 +739,81 @@ app.delete('/api/:table/:id', async (req, res) => {
             });
         }
 
-        await pool.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
+        // Проверяем существование записи
+        const [existing] = await pool.query(
+            `SELECT * FROM ${table} WHERE ${getPrimaryKeyField(table)} = ?`, 
+            [id]
+        );
+        
+        if (existing.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Запись не найдена' 
+            });
+        }
+
+        // Удаляем запись
+        await pool.query(
+            `DELETE FROM ${table} WHERE ${getPrimaryKeyField(table)} = ?`,
+            [id]
+        );
         
         res.status(200).json({ 
             success: true, 
             message: 'Запись успешно удалена' 
         });
+        
     } catch (error) {
-        console.error(error);
+        console.error('Ошибка при удалении:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Ошибка при удалении записи' 
+            message: 'Ошибка сервера при удалении',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
+
+app.get('/getManagerStore', async(req, res) => {
+    try {
+        const { id } = req.query;
+        const [store] = await pool.query(
+            `SELECT name, Store_id
+            FROM Stores
+            WHERE Store_id = (SELECT Stores_id
+                              FROM userStores
+                              WHERE user_id = ? )`,
+                              [id]
+        );
+        if (store.length !== 0) {
+            res.status(200).json({
+                success: true,
+                store: store[0].name,
+                id:store[0].Store_id,
+            });
+        }
+        else {
+            res.status(500).json({
+                success: false,
+                message: 'За менеджером не закреплен магазин'
+            });
+            console.log('За менеджером не закреплен магазин');
+        }
+    }
+    catch(e) {
+        console.error(e.message);
+    }
+})
+
+// Вспомогательная функция для определения первичного ключа
+function getPrimaryKeyField(table) {
+    const fields = {
+        'Users': 'user_id',
+        'Promotions': 'Promotion_id',
+        'Stores': 'Store_id',
+        'category': 'category_id'
+    };
+    return fields[table] || 'id';
+}
 
 app.listen(PORT, () => {
     console.log(`Сервер запущен на http://localhost:${PORT}`);
