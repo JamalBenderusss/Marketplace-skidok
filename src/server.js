@@ -10,12 +10,12 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
 
-dotenv.config({path:'../.env'});
+dotenv.config();
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const allTables = ['Promotions','Stores','Users','roles','comments','category'];
 const corsOptions = {
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || '*',
     methods: 'GET,POST,PATCH,PUT,DELETE',
     credentials: true,
     allowedHeaders: ['Content-Type','Authorization','Cache-Control'],
@@ -815,6 +815,14 @@ function getPrimaryKeyField(table) {
     return fields[table] || 'id';
 }
 
+// Обслуживание статических файлов
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Обработка всех остальных маршрутов
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
 app.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });

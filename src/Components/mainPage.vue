@@ -243,7 +243,6 @@ export default {
       try{
         const response = await axios.get('http://localhost:3000/token', { withCredentials: true });
         const userData = response.data;
-        console.log(userData);
         userRole.value = userData.roles_id;
       }
       catch(e){

@@ -253,7 +253,7 @@ watch(() => props.promoData, (newVal) => {
           <label>
             Магазин
           </label>
-          <select v-if="!selectedStore" v-model="selectedStore" required :class = "{ error: errors.store }"  size="4" 
+          <select v-if="userRole !== 5" v-model="selectedStore" required :class = "{ error: errors.store }"  size="4" 
             style="overflow-y: auto;" >
             <option value="">Выберите магазин</option>
             <option
@@ -266,7 +266,7 @@ watch(() => props.promoData, (newVal) => {
           </select>
           <select v-else v-model="selectedStore" required class="select-input" :class = "{ error: errors.store }" size="2">
             <option
-                value="selectedStore"
+                :value="storeId"
             >
               {{ storeId }}
             </option>
