@@ -14,12 +14,25 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const allTables = ['Promotions','Stores','Users','roles','comments','category'];
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || '*',
-    methods: 'GET,POST,PATCH,PUT,DELETE',
+const allowedOrigins = [
+    'http://62.217.178.172:5173',
+    'http://62.217.178.172'
+  ];
+  
+  const corsOptions = {
+    origin: function (origin, callback) {
+      // разрешаем запросы без Origin (например, Postman) и из списка
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
     credentials: true,
-    allowedHeaders: ['Content-Type','Authorization','Cache-Control'],
-};
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
+  };
+  
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.mail.ru',
@@ -43,7 +56,6 @@ transporter.verify(function(error, success) {
         console.log('Сервер готов к отправке писем');
     }
 });
-
 
 app.use(cors(corsOptions));
 app.use(express.json());

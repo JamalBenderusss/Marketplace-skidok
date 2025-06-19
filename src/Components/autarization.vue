@@ -254,7 +254,7 @@ export default {
           return;
         }
 
-        const response = await axios.post('http://localhost:3000/api/login', {
+        const response = await axios.post('http://62.217.178.172:3000/api/login', {
           email: email.value,
           password: password.value,
         },

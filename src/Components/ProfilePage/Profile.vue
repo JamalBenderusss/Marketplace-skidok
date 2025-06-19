@@ -192,7 +192,7 @@ export default {
 
     const showUserData = async() => {
       try {
-        const response = await axios.get('http://localhost:3000/profile/me', { withCredentials: true });
+        const response = await axios.get('http://62.217.178.172:3000/profile/me', { withCredentials: true });
         const userData = response.data;
         name.value = userData.name;
         email.value = userData.email;
@@ -215,13 +215,13 @@ export default {
 
   const updateUserData = async() => {
     try {
-    const tokenResponse = await axios.get('http://localhost:3000/token', { 
+    const tokenResponse = await axios.get('http://62.217.178.172:3000/token', { 
       withCredentials: true 
     });
     
     const userId = tokenResponse.data.id;
 
-    const response = await axios.patch(`http://localhost:3000/profile/change/${userId}`,{
+    const response = await axios.patch(`http://62.217.178.172:3000/profile/change/${userId}`,{
       email: email.value,
       name: name.value,
       date_of_birth: birthdate.value || '',

@@ -80,7 +80,7 @@ export default {
     };
 
     const logOut = async() => {
-      const response = await axios.post('http://localhost:3000/logout',{},{withCredentials: true});
+      const response = await axios.post('http://62.217.178.172:3000/logout',{},{withCredentials: true});
       if (response.data.success) {
         router.push('/');
       }else {

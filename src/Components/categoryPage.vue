@@ -235,7 +235,7 @@ export default {
     
     const checkUserRole = async () => {
       try{
-        const response = await axios.get('http://localhost:3000/token', { withCredentials: true });
+        const response = await axios.get('http://62.217.178.172:3000/token', { withCredentials: true });
         const userData = response.data;
         userRole.value = userData.roles_id;
       }
@@ -248,7 +248,7 @@ export default {
     const loadCategoryPromotions = async (categoryId) => {
       try {
         // Получаем название категории
-        const categoryResponse = await axios.get(`http://localhost:3000/api/category/${categoryId}`);
+        const categoryResponse = await axios.get(`http://62.217.178.172:3000/api/category/${categoryId}`);
         categoryName.value = categoryResponse.data.name;
 
         if (userRole.value <= 2) {
@@ -258,7 +258,7 @@ export default {
         }        
         
         // Получаем промокоды для категории
-        const response = await axios.get(`http://localhost:3000/api/promotions/category/${categoryId}`);
+        const response = await axios.get(`http://62.217.178.172:3000/api/promotions/category/${categoryId}`);
         promotions.value = response.data;
         filtredDiscounts.value = response.data;
       } catch (error) {

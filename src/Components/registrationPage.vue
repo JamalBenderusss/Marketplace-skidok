@@ -267,7 +267,7 @@ export default {
       };
 
       try {
-        const response = await axios.post('http://localhost:3000/api/registration', userData, {
+        const response = await axios.post('http://62.217.178.172:3000/api/registration', userData, {
         withCredentials: true
         });
         if (response.data.success) {

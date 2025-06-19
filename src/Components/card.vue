@@ -376,7 +376,7 @@ export default {
 
     async openModal() {
       this.isOpenModal = true;
-      const response = await axios.get('http://localhost:3000/api/getLinkStore', {
+      const response = await axios.get('http://62.217.178.172:3000/api/getLinkStore', {
         params: {
           store: this.market
         }

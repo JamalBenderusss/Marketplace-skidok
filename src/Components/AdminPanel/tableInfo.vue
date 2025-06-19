@@ -242,10 +242,10 @@ export default {
 
       const checkUserRole = async () => {
       try{
-        const response1 = await axios.get('http://localhost:3000/token', { withCredentials: true });
+        const response1 = await axios.get('http://62.217.178.172:3000/token', { withCredentials: true });
         const userData = response1.data;
         if (userData.roles_id === 5) {
-          const response = await axios.get('http://localhost:3000/getManagerStore', {
+          const response = await axios.get('http://62.217.178.172:3000/getManagerStore', {
             params: {
               id: userData.id
             }

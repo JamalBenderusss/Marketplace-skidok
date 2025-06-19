@@ -87,7 +87,7 @@ export default {
 
   const loadInformation = async(table) => {
     try {
-      const response = await axios.get(`http://localhost:3000/api/${table}`, 
+      const response = await axios.get(`http://62.217.178.172:3000/api/${table}`, 
       { withCredentials: true ,
         headers: {
         'Cache-Control': 'no-cache' // Отключаем кэширование
@@ -106,7 +106,7 @@ export default {
       const idField = getPrimaryKeyField(table);
       const id = item[idField];
 
-      await axios.delete(`http://localhost:3000/api/${table}/${id}`, { withCredentials: true });
+      await axios.delete(`http://62.217.178.172:3000/api/${table}/${id}`, { withCredentials: true });
       location.reload();
       alert('Запись успешно удалена!');
     }

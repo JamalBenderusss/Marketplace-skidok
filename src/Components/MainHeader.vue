@@ -25,7 +25,7 @@ export default {
 
     const fetchCategories = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/category');
+        const response = await axios.get('http://62.217.178.172:3000/api/category');
         categories.value = response.data;
       } catch (error) {
         console.error('Ошибка при получении категорий:', error);

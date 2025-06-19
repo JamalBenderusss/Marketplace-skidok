@@ -19,7 +19,7 @@ export default {
 
     const loadCategories = async () => {
       const [storesRes] = await Promise.all([
-        axios.get('http://localhost:3000/api/Stores')
+        axios.get('http://62.217.178.172:3000/api/Stores')
       ]);
       stores.value = storesRes.data;
           // Добавляем проверку, что categoryData не пустой объект
@@ -51,13 +51,13 @@ export default {
 
       try {
         if (roles_id.value === '5') {
-            response = await axios.put('http://localhost:3000/api/setStoreOfManager', { id: props.user.user_id, role: roles_id.value, store: selectedStore.value}, {
+            response = await axios.put('http://62.217.178.172:3000/api/setStoreOfManager', { id: props.user.user_id, role: roles_id.value, store: selectedStore.value}, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });          
         } else {
-            response = await axios.put('http://localhost:3000/api/changeRole', { id: props.user.user_id, role: roles_id.value}, {
+            response = await axios.put('http://62.217.178.172:3000/api/changeRole', { id: props.user.user_id, role: roles_id.value}, {
                 headers: {
                     'Content-Type': 'application/json'
                 }

@@ -41,9 +41,9 @@ export default {
     const loadImagesStoresCategories = async () => {
       try {
         const [imagesRes, storesRes, categoriesRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/images'),
-          axios.get('http://localhost:3000/api/Stores'),
-          axios.get('http://localhost:3000/api/category')
+          axios.get('http://62.217.178.172:3000/api/images'),
+          axios.get('http://62.217.178.172:3000/api/Stores'),
+          axios.get('http://62.217.178.172:3000/api/category')
         ]);
         
         databaseImages.value = imagesRes.data;
@@ -140,12 +140,12 @@ export default {
         let response;
         
         if (props.mode === 'add') {
-          response = await axios.post('http://localhost:3000/api/addPromo', payload);
+          response = await axios.post('http://62.217.178.172:3000/api/addPromo', payload);
         } else {
           // Для редактирования добавляем ID промокода
           payload.id = props.promoData.Promotion_id;
           
-          response = await axios.put('http://localhost:3000/api/updatePromo', payload, {
+          response = await axios.put('http://62.217.178.172:3000/api/updatePromo', payload, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -179,11 +179,11 @@ export default {
 
     const checkUserRole = async () => {
       try{
-        const response1 = await axios.get('http://localhost:3000/token', { withCredentials: true });
+        const response1 = await axios.get('http://62.217.178.172:3000/token', { withCredentials: true });
         const userData = response1.data;
         userRole.value = userData.roles_id;
         if (userRole.value === 5) {
-          const response = await axios.get('http://localhost:3000/getManagerStore', {
+          const response = await axios.get('http://62.217.178.172:3000/getManagerStore', {
             params: {
               id: userData.id
             }

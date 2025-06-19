@@ -49,9 +49,9 @@ export default {
 
       try {
         if (props.mode === 'add') {
-            response = await axios.post('http://localhost:3000/api/addCategory', { name: category.value });
+            response = await axios.post('http://62.217.178.172:3000/api/addCategory', { name: category.value });
         }else {
-            response = await axios.put('http://localhost:3000/api/editCategory', { id: props.categoryData.category_id, name: category.value }, {
+            response = await axios.put('http://62.217.178.172:3000/api/editCategory', { id: props.categoryData.category_id, name: category.value }, {
                 headers: {
                     'Content-Type': 'application/json'
                 }

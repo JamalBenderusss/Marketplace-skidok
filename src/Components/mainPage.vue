@@ -241,7 +241,7 @@ export default {
 
     const checkUserRole = async () => {
       try{
-        const response = await axios.get('http://localhost:3000/token', { withCredentials: true });
+        const response = await axios.get('http://62.217.178.172:3000/token', { withCredentials: true });
         const userData = response.data;
         userRole.value = userData.roles_id;
       }
@@ -260,7 +260,7 @@ export default {
           return;
         }
 
-        const response = await axios.get('http://localhost:3000/api/Promotions');
+        const response = await axios.get('http://62.217.178.172:3000/api/Promotions');
         discounts.value = response.data;
         filtredDiscounts.value = response.data;
       } catch (e) {
@@ -339,7 +339,6 @@ export default {
       isLoadingUser,
       userRole,
       fetchDiscounts,
-      compareDiscounts,
       loadMore,
       searchCardsByInput,
       changeBtn,
